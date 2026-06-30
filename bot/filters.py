@@ -1,0 +1,29 @@
+from aiogram.filters import BaseFilter
+from aiogram.types import Message
+
+from database import get_registration
+
+TEXT_INPUT_STATES = frozenset(
+    {
+        "name",
+        "email",
+        "telegram_username",
+        "social",
+        "works",
+        "role_other",
+        "workplace_other",
+        "project",
+        "source_other",
+    }
+)
+
+
+class RegistrationTextFilter(BaseFilter):
+    async def __call__(self, message: Message) -> bool | dict[str, str]:
+        reg = get_registration(message.from_user.id)
+        if not reg or reg.get("is_completed"):
+            return False
+        current = reg.get("current_state")
+        if current not in TEXT_INPUT_STATES:
+            return False
+        return {"reg_state": current}
