@@ -9,7 +9,7 @@ from bot.handlers.registration import router as registration_router
 def get_routers() -> list[Router]:
     return [
         admin_router,
+        feedback_router,
         registration_router,
         menu_router,
-        feedback_router,
     ]

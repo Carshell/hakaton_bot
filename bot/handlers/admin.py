@@ -1,7 +1,6 @@
 import csv
 import io
 import logging
-import os
 from typing import Any
 
 from aiogram import F, Router
@@ -9,6 +8,7 @@ from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 
+from bot.admins import get_admin_ids
 from bot.keyboards import broadcast_confirm_kb
 from bot.states import AdminStates
 from database import get_all_completed, get_completed_user_ids, get_segment_user_ids, get_stats
@@ -18,13 +18,8 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-def _admin_ids() -> set[int]:
-    raw = os.getenv("ADMIN_USER_IDS", "")
-    return {int(x.strip()) for x in raw.split(",") if x.strip().isdigit()}
-
-
 def _is_admin(user_id: int) -> bool:
-    return user_id in _admin_ids()
+    return user_id in get_admin_ids()
 
 
 @router.message(Command("stats"))

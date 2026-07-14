@@ -12,6 +12,7 @@ def welcome_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="🚀 Так, поїхали", callback_data="reg:start")
     builder.button(text="📖 Розкажи детальніше", callback_data="reg:details")
+    builder.button(text="Зв'язатися з нами📞", callback_data="menu:feedback")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -111,7 +112,7 @@ def main_menu_kb() -> InlineKeyboardMarkup:
     builder.button(text="💻 Технічне завдання", callback_data="menu:tech")
     builder.button(text="👥 Ментори і журі", callback_data="menu:mentors")
     builder.button(text="❓ FAQ", callback_data="menu:faq")
-    builder.button(text="💬 Зв'язатися з нами", callback_data="menu:feedback")
+    builder.button(text="Зв'язатися з нами📞", callback_data="menu:feedback")
     builder.button(text="🌐 Більше інформації", url=HACKATHON_SITE_URL)
     builder.adjust(1)
     return builder.as_markup()
