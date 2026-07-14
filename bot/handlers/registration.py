@@ -42,6 +42,20 @@ from services.google_sheets import sync_registration
 logger = logging.getLogger(__name__)
 router = Router()
 
+ALREADY_REGISTERED = "Ти вже зареєстрований! Ось головне меню:"
+
+
+async def stop_if_registered(callback: CallbackQuery, state: FSMContext) -> bool:
+    """Return True if user is already registered (and reply was sent)."""
+    reg = get_registration(callback.from_user.id)
+    if not reg or not reg.get("is_completed"):
+        return False
+    await state.clear()
+    await callback.answer()
+    await callback.message.answer(ALREADY_REGISTERED, reply_markup=main_menu_kb())
+    return True
+
+
 TEXT_HANDLERS = {
     "name": handle_name_input,
     "email": handle_email_input,
@@ -77,10 +91,7 @@ async def cmd_start(message: Message, state: FSMContext, command: CommandObject)
     reg = get_registration(user_id)
     if reg and reg.get("is_completed"):
         await state.clear()
-        await message.answer(
-            "Ти вже зареєстрований! Ось головне меню:",
-            reply_markup=main_menu_kb(),
-        )
+        await message.answer(ALREADY_REGISTERED, reply_markup=main_menu_kb())
         return
 
     if reg and reg.get("current_state") not in (None, "welcome", "completed"):
@@ -97,12 +108,16 @@ async def cmd_start(message: Message, state: FSMContext, command: CommandObject)
 
 @router.callback_query(F.data == "reg:details")
 async def on_details(callback: CallbackQuery, state: FSMContext) -> None:
+    if await stop_if_registered(callback, state):
+        return
     await callback.answer()
     await show_details(callback.message, state, user_id=callback.from_user.id)
 
 
 @router.callback_query(F.data == "reg:start")
 async def on_reg_start(callback: CallbackQuery, state: FSMContext) -> None:
+    if await stop_if_registered(callback, state):
+        return
     await callback.answer()
     ensure_registration(callback.from_user.id)
     await show_name(callback.message, state, user_id=callback.from_user.id)
@@ -110,6 +125,8 @@ async def on_reg_start(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "reg:resume")
 async def on_resume(callback: CallbackQuery, state: FSMContext) -> None:
+    if await stop_if_registered(callback, state):
+        return
     await callback.answer()
     reg = get_registration(callback.from_user.id)
     if reg:
@@ -118,6 +135,8 @@ async def on_resume(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "reg:restart")
 async def on_restart(callback: CallbackQuery, state: FSMContext) -> None:
+    if await stop_if_registered(callback, state):
+        return
     await callback.answer()
     reg = get_registration(callback.from_user.id)
     payload = reg.get("start_payload") if reg else None
@@ -149,6 +168,15 @@ async def on_skip_social(callback: CallbackQuery, state: FSMContext) -> None:
     from bot.registration_flow import show_works
 
     await show_works(callback.message, state, user_id=callback.from_user.id)
+
+
+@router.callback_query(F.data == "reg:skip_works")
+async def on_skip_works(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer()
+    update_registration(callback.from_user.id, portfolio_links=None)
+    from bot.registration_flow import show_role
+
+    await show_role(callback.message, state, user_id=callback.from_user.id)
 
 
 @router.callback_query(F.data.startswith("reg:role:"))

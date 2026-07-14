@@ -164,7 +164,7 @@ async def show_works(message: Message, state: FSMContext, user_id: int | None = 
     uid = _uid(message, user_id)
     await state.set_state(RegistrationStates.works)
     set_state(uid, "works")
-    await message.answer(WORKS_PROMPT)
+    await message.answer(WORKS_PROMPT, reply_markup=skip_kb("reg:skip_works"))
 
 
 async def show_role(message: Message, state: FSMContext, user_id: int | None = None) -> None:

@@ -24,9 +24,9 @@ def details_kb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def skip_kb() -> InlineKeyboardMarkup:
+def skip_kb(callback_data: str = "reg:skip_social") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="⏭ Пропустити", callback_data="reg:skip_social")
+    builder.button(text="⏭ Пропустити", callback_data=callback_data)
     return builder.as_markup()
 
 
