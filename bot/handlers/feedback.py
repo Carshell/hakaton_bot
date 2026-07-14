@@ -1,6 +1,7 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import Router
+from aiogram.filters import BaseFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -13,8 +14,57 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
+class AdminFeedbackReplyFilter(BaseFilter):
+    """Match only when an admin replies to a tracked feedback message."""
+
+    async def __call__(self, message: Message) -> bool | dict:
+        if not message.reply_to_message or not message.from_user:
+            return False
+        if message.from_user.id not in get_admin_ids():
+            return False
+        link = get_feedback_by_admin_message(
+            message.chat.id,
+            message.reply_to_message.message_id,
+        )
+        if not link:
+            return False
+        return {"feedback_link": link}
+
+
+@router.message(AdminFeedbackReplyFilter())
+async def on_admin_reply(message: Message, state: FSMContext, feedback_link: dict) -> None:
+    reply_text = message.text or message.caption or ""
+    if not reply_text:
+        await message.answer("Надішли текстову відповідь.")
+        return
+
+    await message.bot.send_message(
+        chat_id=feedback_link["user_id"],
+        text=f"📩 Відповідь від організаторів:\n\n{reply_text}",
+    )
+    # Leave feedback mode so next replies keep working as admin answers
+    await state.clear()
+    await message.answer("✅ Відповідь надіслано користувачу.")
+
+
 @router.message(MenuStates.feedback)
-async def on_feedback_message(message: Message, state: FSMContext) -> None:
+async def on_feedback_message(message: Message) -> None:
+    # Safety: never treat an admin reply-to-feedback as a new user message
+    if message.reply_to_message and message.from_user.id in get_admin_ids():
+        link = get_feedback_by_admin_message(
+            message.chat.id,
+            message.reply_to_message.message_id,
+        )
+        if link:
+            reply_text = message.text or message.caption or ""
+            if reply_text:
+                await message.bot.send_message(
+                    chat_id=link["user_id"],
+                    text=f"📩 Відповідь від організаторів:\n\n{reply_text}",
+                )
+                await message.answer("✅ Відповідь надіслано користувачу.")
+            return
+
     admin_ids = get_admin_ids()
     if not admin_ids:
         await message.answer("Зворотний зв'язок тимчасово недоступний.")
@@ -53,28 +103,3 @@ async def on_feedback_message(message: Message, state: FSMContext) -> None:
         return
 
     await message.answer(FEEDBACK_SENT)
-
-
-@router.message(F.reply_to_message)
-async def on_admin_reply(message: Message) -> None:
-    admin_ids = get_admin_ids()
-    if message.from_user.id not in admin_ids:
-        return
-
-    link = get_feedback_by_admin_message(
-        message.chat.id,
-        message.reply_to_message.message_id,
-    )
-    if not link:
-        return
-
-    reply_text = message.text or message.caption or ""
-    if not reply_text:
-        await message.answer("Надішли текстову відповідь.")
-        return
-
-    await message.bot.send_message(
-        chat_id=link["user_id"],
-        text=f"📩 Відповідь від організаторів:\n\n{reply_text}",
-    )
-    await message.answer("✅ Відповідь надіслано користувачу.")
