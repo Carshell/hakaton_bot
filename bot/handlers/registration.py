@@ -85,6 +85,7 @@ async def on_registration_text(
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, command: CommandObject) -> None:
+    await state.clear()
     user_id = message.from_user.id
     payload = command.args
 

@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import Router
-from aiogram.filters import BaseFilter
+from aiogram.filters import BaseFilter, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -42,31 +42,15 @@ async def on_admin_reply(message: Message, state: FSMContext, feedback_link: dic
         chat_id=feedback_link["user_id"],
         text=f"📩 Відповідь від організаторів:\n\n{reply_text}",
     )
-    # Leave feedback mode so next replies keep working as admin answers
     await state.clear()
     await message.answer("✅ Відповідь надіслано користувачу.")
 
 
-@router.message(MenuStates.feedback)
-async def on_feedback_message(message: Message) -> None:
-    # Safety: never treat an admin reply-to-feedback as a new user message
-    if message.reply_to_message and message.from_user.id in get_admin_ids():
-        link = get_feedback_by_admin_message(
-            message.chat.id,
-            message.reply_to_message.message_id,
-        )
-        if link:
-            reply_text = message.text or message.caption or ""
-            if reply_text:
-                await message.bot.send_message(
-                    chat_id=link["user_id"],
-                    text=f"📩 Відповідь від організаторів:\n\n{reply_text}",
-                )
-                await message.answer("✅ Відповідь надіслано користувачу.")
-            return
-
+@router.message(MenuStates.feedback, ~Command())
+async def on_feedback_message(message: Message, state: FSMContext) -> None:
     admin_ids = get_admin_ids()
     if not admin_ids:
+        await state.clear()
         await message.answer("Зворотний зв'язок тимчасово недоступний.")
         return
 
@@ -95,6 +79,9 @@ async def on_feedback_message(message: Message) -> None:
             sent_any = True
         except Exception:
             logger.exception("Failed to forward feedback to admin %s", admin_id)
+
+    # Exit contact mode after one message so the bot works normally again
+    await state.clear()
 
     if not sent_any:
         await message.answer(
