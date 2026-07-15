@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import Router
-from aiogram.filters import BaseFilter, Command
+from aiogram.filters import BaseFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -46,7 +46,7 @@ async def on_admin_reply(message: Message, state: FSMContext, feedback_link: dic
     await message.answer("✅ Відповідь надіслано користувачу.")
 
 
-@router.message(MenuStates.feedback, ~Command())
+@router.message(MenuStates.feedback)
 async def on_feedback_message(message: Message, state: FSMContext) -> None:
     admin_ids = get_admin_ids()
     if not admin_ids:
